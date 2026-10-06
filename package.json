@@ -1,0 +1,15 @@
+{
+  "name": "provenance-mvp",
+  "version": "0.1.0",
+  "description": "Record developer work into a tamper-evident log",
+  "bin": {
+    "provenance": "./provenance.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "e2e": "node scripts/e2e.js"
+  },
+  "keywords": ["provenance", "audit", "tamper-evident"],
+  "author": "",
+  "license": "MIT"
+}
