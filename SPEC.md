@@ -10,7 +10,7 @@ One developer, one machine, one chain per repository.
 
 ## 3. Where files live
 - Live log (local only): `<git-dir>/provenance/log.jsonl`, found with `git rev-parse --git-path provenance`. It is never inside the working tree.
-- Published bundle: orphan branch `provenance-log` containing `log.jsonl`, `log.jsonl.sig`, `log.jsonl.ots`, `meta.json`.
+- Published bundle: branch whose first commit has no parent (see 15.6 for later commits) `provenance-log` containing `log.jsonl`, `log.jsonl.sig`, `log.jsonl.ots`, `meta.json`.
 - `verification.json` is produced by CI at build time and shown on the site. It is not stored in the branch.
 
 ## 4. Log format
@@ -49,19 +49,20 @@ All paths are relative to the repo root and use forward slashes. All numbers are
 `verifyChain(entries)` checks, in order for each entry: schema, seq (no gaps), prev (equals previous hash), hash (recomputed). First failure stops the check and returns `{ ok: false, brokenAt: seq, reason }` where reason is `bad_schema`, `seq_gap`, `prev_mismatch`, or `hash_mismatch`. Timestamps going backwards give a warning only.
 
 ## 9. Active span
-`activeSpanMs` = sum of gaps between consecutive events that are 15 minutes or shorter. Longer gaps count as idle.
+`activeSpanMs` = sum of gaps between consecutive events that are 15 minutes or shorter . Longer gaps count as idle. Computed at read time, never stored
 
 ## 10. Writing and locking
 Every process (extension, git hooks, CLI) appends only through `appendEvent` in `@provenance/core/node`. It takes an exclusive lock file `log.lock` in the log folder, reads the last entry, appends one line, then releases the lock. Nobody writes to `log.jsonl` any other way.
 
 ## 11. Bundle files
+Publishing never happens for an empty log, so meta.json always has events of at least 1
 `meta.json`:
 ```
 { "v": 1, "repo": "owner/name", "branch": "session-refresh", "developer": "github-login",
   "headSeq": 13, "headHash": "<64 hex>", "events": 14, "publishedAt": "ISO",
   "signingKey": { "type": "ssh-ed25519", "fingerprint": "SHA256:..." }, "toolVersion": "0.1.0" }
 ```
-`log.jsonl.sig`: signature over the exact bytes of `log.jsonl` made with the developer's Git-configured SSH (or GPG) key.
+`log.jsonl.sig`: signature over the exact bytes of `log.jsonl` made with the developer's Git-configured SSH key.
 `log.jsonl.ots`: OpenTimestamps proof for the 32-byte head hash.
 `verification.json` (written by CI):
 ```
@@ -72,7 +73,7 @@ Every process (extension, git hooks, CLI) appends only through `appendEvent` in 
 ```
 
 ## 12. CLI
-`provenance verify [path]`: exit 0 chain ok, 1 chain broken, 2 usage or file error. `--json` prints machine-readable output. Other commands (init, publish) are added by other packages in `src/commands/`.
+`provenance verify [path]`: exit 0 chain ok, 1 chain broken, 2 usage or file error. `--json` prints machine-readable output. Other commands (init, publish) are added as files in packages/cli/src/commands/ that call library code from other packages in `src/commands/`.
 
 ## 13. Golden test vector
 (filled in after Prompt 5: the canonical string and the hash of the sample entry)
